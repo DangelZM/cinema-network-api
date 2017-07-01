@@ -7,5 +7,9 @@ import (
 type Cinema struct {
 	Id    bson.ObjectId `json:"id,omitempty" bson:"_id,omitempty"`
 	Title string        `json:"title" binding:"required" bson:"title"`
-	HallCount  int      `json:"hall_count" binding:"required" bson:"hall_count"`
+}
+
+type CinemaWithHalls struct {
+	Cinema `bson:",inline"`
+	Halls  []Hall `json:"halls" bson:"halls"`
 }

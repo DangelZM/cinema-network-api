@@ -42,7 +42,7 @@ func Connect(MongoDBUrl string) {
 	Mongo = mongo
 
 	Cinemas = session.DB(mongo.Database).C("cinemas")
-	Halls = session.DB(mongo.Database).C("cinema_halls")
+	Halls = session.DB(mongo.Database).C("halls")
 	Movies = session.DB(mongo.Database).C("movies")
 	Seances = session.DB(mongo.Database).C("seances")
 

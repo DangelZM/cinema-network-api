@@ -8,6 +8,7 @@ import (
 
 	"github.com/dangelzm/cinema-network-api/db"
 	"github.com/dangelzm/cinema-network-api/models"
+	"time"
 )
 
 func Create(c *gin.Context) {
@@ -26,6 +27,19 @@ func Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, cinema)
 }
 
+func Delete(c *gin.Context) {
+	id := c.Params.ByName("id")
+
+	if err := db.Cinemas.Remove(bson.M{"_id": bson.ObjectIdHex(id)}); err != nil {
+		c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "OK",
+	})
+}
+
 func GetList(c *gin.Context) {
 	cinemas := []models.Cinema{}
 
@@ -39,15 +53,19 @@ func GetList(c *gin.Context) {
 func GetOne(c *gin.Context) {
 	id := c.Params.ByName("id")
 
-	cinema := models.Cinema{}
+	cinema := models.CinemaWithHalls{}
 
-	if !bson.IsObjectIdHex(id) {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if obj := bson.ObjectIdHex(id); !obj.Valid() {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if err := db.Cinemas.Find(bson.M{"_id": obj}).One(&cinema); err != nil {
+	pipeline := []bson.M{
+		bson.M{"$match": bson.M{"_id": bson.ObjectIdHex(id)}},
+		bson.M{"$lookup": bson.M{
+			"from":         "halls",
+			"localField":   "_id",
+			"foreignField": "cinema_id",
+			"as":           "halls",
+		}},
+	}
+
+	if err := db.Cinemas.Pipe(pipeline).One(&cinema); err != nil {
 		c.Error(err)
 		return
 	}
@@ -74,8 +92,9 @@ func GetHalls(c *gin.Context) {
 	c.JSON(http.StatusOK, halls)
 }
 
-func Delete(c *gin.Context) {
+func GetSeancesByDate(c *gin.Context) {
 	id := c.Params.ByName("id")
+	date := c.Params.ByName("date")
 
 	if !bson.IsObjectIdHex(id) {
 		c.Error(errors.New("Not valid id"))
@@ -83,12 +102,59 @@ func Delete(c *gin.Context) {
 	} else if obj := bson.ObjectIdHex(id); !obj.Valid() {
 		c.Error(errors.New("Not valid id"))
 		return
-	} else if err := db.Cinemas.Remove(bson.M{"_id": obj}); err != nil {
-		c.Error(err)
+	}
+
+	if date == "today" {
+		date = time.Now().Format("2006-01-02")
+	}
+
+	dayStart, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		c.Error(errors.New("Not valid date"))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "OK",
-	})
+	dayEnd := dayStart.Add(time.Hour * 24)
+
+	pipeline := []bson.M{
+		bson.M{"$match": bson.M{
+			"$and": []bson.M{
+				bson.M{"cinema_id": bson.ObjectIdHex(id)},
+				bson.M{"$and": []bson.M{
+					{"start_time": bson.M{
+						"$gte": dayStart,
+					}},
+					{"end_time": bson.M{
+						"$lte": dayEnd,
+					}},
+				}},
+			},
+		}},
+		bson.M{"$lookup": bson.M{
+			"from":         "movies",
+			"localField":   "movie_id",
+			"foreignField": "_id",
+			"as":           "movies",
+		}},
+		bson.M{"$addFields": bson.M{
+			"movie": bson.M{
+				"$arrayElemAt": []interface{}{
+					"$movies",
+					0,
+				},
+			},
+			"movie_id": "",
+		}},
+		bson.M{"$sort": bson.M{
+			"start_time": 1,
+		}},
+	}
+
+	seances := []models.SeanceWithMovie{}
+
+	if err := db.Seances.Pipe(pipeline).All(&seances); err != nil {
+		c.Error(err)
+	}
+
+	c.JSON(http.StatusOK, seances)
 }

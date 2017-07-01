@@ -27,6 +27,7 @@ func registerRoutes(router *gin.Engine) {
 			cinemas.GET("/:id", cinemasHandler.GetOne)
 			cinemas.DELETE("/:id", cinemasHandler.Delete)
 			cinemas.GET("/:id/halls", cinemasHandler.GetHalls)
+			cinemas.GET("/:id/seances/:date", cinemasHandler.GetSeancesByDate)
 		}
 
 		halls := api.Group("/halls")
