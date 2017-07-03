@@ -78,13 +78,7 @@ func GetHalls(c *gin.Context) {
 
 	halls := []models.Hall{}
 
-	if !bson.IsObjectIdHex(id) {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if obj := bson.ObjectIdHex(id); !obj.Valid() {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if err := db.Halls.Find(bson.M{"cinema_id": obj}).All(&halls); err != nil {
+	if err := db.Halls.Find(bson.M{"cinema_id": bson.ObjectIdHex(id)}).All(&halls); err != nil {
 		c.Error(err)
 		return
 	}
@@ -95,14 +89,6 @@ func GetHalls(c *gin.Context) {
 func GetSeancesByDate(c *gin.Context) {
 	id := c.Params.ByName("id")
 	date := c.Params.ByName("date")
-
-	if !bson.IsObjectIdHex(id) {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if obj := bson.ObjectIdHex(id); !obj.Valid() {
-		c.Error(errors.New("Not valid id"))
-		return
-	}
 
 	if date == "today" {
 		date = time.Now().Format("2006-01-02")

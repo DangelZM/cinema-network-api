@@ -1,7 +1,6 @@
 package seances
 
 import (
-	"errors"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/mgo.v2/bson"
 	"net/http"
@@ -128,13 +127,7 @@ func GetOne(c *gin.Context) {
 
 	seance := models.Seance{}
 
-	if !bson.IsObjectIdHex(id) {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if obj := bson.ObjectIdHex(id); !obj.Valid() {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if err := db.Seances.Find(bson.M{"_id": obj}).One(&seance); err != nil {
+	if err := db.Seances.Find(bson.M{"_id": bson.ObjectIdHex(id)}).One(&seance); err != nil {
 		c.Error(err)
 		return
 	}
@@ -145,13 +138,7 @@ func GetOne(c *gin.Context) {
 func Delete(c *gin.Context) {
 	id := c.Params.ByName("id")
 
-	if !bson.IsObjectIdHex(id) {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if obj := bson.ObjectIdHex(id); !obj.Valid() {
-		c.Error(errors.New("Not valid id"))
-		return
-	} else if err := db.Seances.Remove(bson.M{"_id": obj}); err != nil {
+	if err := db.Seances.Remove(bson.M{"_id": bson.ObjectIdHex(id)}); err != nil {
 		c.Error(err)
 		return
 	}
